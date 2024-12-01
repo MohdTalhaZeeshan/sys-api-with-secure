@@ -1,0 +1,22 @@
+#%RAML 1.0
+title: hospital-database-management-sapi
+/bokapp:
+  post:
+    description: "Scheduling an appointment for patient"
+    body:
+      application/json:
+        example: !include Examples/example.raml
+          
+    
+    responses:
+      201:
+        body:
+          application/json:
+            example: !include Examples/example1.raml
+             
+
+      404:
+        body:
+          application/json:
+            example: !include Examples/example2.raml
+              

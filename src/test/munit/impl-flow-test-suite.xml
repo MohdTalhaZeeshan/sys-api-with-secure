@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:munit="http://www.mulesoft.org/schema/mule/munit" xmlns:munit-tools="http://www.mulesoft.org/schema/mule/munit-tools"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xsi:schemaLocation="
+		http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+		http://www.mulesoft.org/schema/mule/munit http://www.mulesoft.org/schema/mule/munit/current/mule-munit.xsd
+		http://www.mulesoft.org/schema/mule/munit-tools  http://www.mulesoft.org/schema/mule/munit-tools/current/mule-munit-tools.xsd">
+	<munit:config name="impl-flow-test-suite.xml" />
+	<munit:test name="impl-flow-test-suite-Book-appointment-spai-flowTest" doc:id="da2bc4c6-4aaa-4447-873b-fdda469a1ff0" description="Test">
+		<munit:behavior >
+			<munit-tools:mock-when doc:name="Mock when" doc:id="57f50037-044c-4182-8791-77fd47e7c793" processor="db:select">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="2422a49d-b302-4319-9820-7ef2431c584c" attributeName="doc:id" />
+				</munit-tools:with-attributes>
+			</munit-tools:mock-when>
+			<munit-tools:mock-when doc:name="Mock when" doc:id="df1d3d92-3017-485c-b0d3-c4db28f4d706" processor="db:insert">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="8aba7f0f-78ae-46de-af93-2e143ad7d772" attributeName="doc:id" />
+				</munit-tools:with-attributes>
+			</munit-tools:mock-when>
+			<munit-tools:mock-when doc:name="Mock when" doc:id="ce8f5975-7c8f-45e0-b5d9-e605867f958b" processor="db:select">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="4c799ad6-7307-4a2b-8238-e6bda609e9f0" attributeName="doc:id" />
+				</munit-tools:with-attributes>
+			</munit-tools:mock-when>
+			<munit-tools:mock-when doc:name="Mock when" doc:id="cad0e891-90bc-4ef0-af5e-4587a220828a" processor="file:write">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="9514a77d-59fe-4838-aaa7-0c7a6f69d44a" attributeName="doc:id" />
+				</munit-tools:with-attributes>
+			</munit-tools:mock-when>
+		</munit:behavior>
+		<munit:execution >
+			<munit:set-event doc:name="Set Event" doc:id="7c4d315d-7629-42cc-80f3-849e75eeb139" >
+				<munit:payload value='#[{&#10;        "Name": "Bharath",&#10;        "Reason" : "Ear",&#10;        "ID": 11,&#10;        "Gender": "Male",&#10;        "BOD": "1965-08-20",&#10;        "MobileNumber": 8567890123,&#10;        "Address_City": "Houston",&#10;        "Address_State": "TX",&#10;        "Address_ZipCode": "77001",&#10;        "EmailID": "Bharath@gmail.com",&#10;        "Occupation": "Accountant",&#10;        "MaritalStatus": "Widowed",&#10;        "EmergencyContactDetails": 8543210987,&#10;        "Status": "Visited",&#10;        "MedicalHistory": "Diabetes Type 2.",&#10;        "Timestamp": now() as String {format: "yyyy-MM-dd HH:mm:ss"}&#10;    }]' />
+			</munit:set-event>
+			<flow-ref doc:name="Flow-ref to Book-appointment-spai-flow" doc:id="ca33625c-a951-4b98-980c-c79b219b0b63" name="Book-appointment-spai-flow"/>
+		</munit:execution>
+	</munit:test>
+
+
+</mule>

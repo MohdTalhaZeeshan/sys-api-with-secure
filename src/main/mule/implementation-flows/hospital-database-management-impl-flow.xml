@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:file="http://www.mulesoft.org/schema/mule/file" xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd">
+	
+	<sub-flow name="Book-appointment-spai-flow" doc:id="dc51d996-28c0-48a4-8325-b169a19c9ef1" >
+		<logger level="INFO" doc:name="Start Logger" doc:id="0b97d7c6-335c-4711-b7bb-66acbe7b26cd" message='#["Book Appointment flow started in system layer impl-flow :: " ++  vars.correlationid]'/>
+		<ee:transform doc:name="Converting payload into json and storing name and mobile number in variables." doc:id="3e504354-8b0a-4263-aef9-b13988239bed" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json 
+---
+payload]]></ee:set-payload>
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="originalPayload" ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-variable>
+				<ee:set-variable variableName="Name" ><![CDATA[payload.Name]]></ee:set-variable>
+				<ee:set-variable variableName="mobilenumber" ><![CDATA[payload.MobileNumber]]></ee:set-variable>
+				<ee:set-variable variableName="ID" ><![CDATA[payload.ID]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<db:select doc:name="Retrieving the record based on Name and Mobile Number." doc:id="2422a49d-b302-4319-9820-7ef2431c584c" config-ref="Database_Config">
+			<db:sql ><![CDATA[SELECT * FROM PATIENT WHERE (Name =:Name and MobileNumber =:MobileNumber);]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	"ID" : vars.ID,
+	"Name" : vars.Name,
+	"MobileNumber" : vars.mobilenumber
+}]]]></db:input-parameters>
+		</db:select>
+		<choice doc:name="Routing according to the status of payload." doc:id="b2fb2c05-ea38-4cd0-8e55-e1e1e9c29da0" >
+			<when expression="#[sizeOf(payload) &gt; 0]">
+				<logger level="INFO" doc:name="Printing a message as Patient Record present in Database." doc:id="48f99c10-ee4c-4956-887d-2b2c9154b899" message='#["Patient Record present in Database :: " ++ vars.correlationid]'/>
+				
+			</when>
+			<otherwise >
+				<db:insert doc:name="Inserting the Patient Data into the database." doc:id="8aba7f0f-78ae-46de-af93-2e143ad7d772" config-ref="Database_Config">
+					<db:sql ><![CDATA[INSERT INTO PATIENT
+(Name, ID, Gender, BOD, MobileNumber, Address_City, Address_State, Address_ZipCode, EmailID, Occupation, MaritalStatus, EmergencyContactDetails, Status, MedicalHistory, Timestamp)
+VALUES 
+(:name, :id, :gender, :bod, :mobileNumber, :addressCity, :addressState, :addressZipCode, :emailID, :occupation, :maritalStatus, :emergencyContactDetails, :status, :medicalHistory, :timestamp);]]></db:sql>
+					<db:input-parameters ><![CDATA[#[{
+	
+  "name": vars.originalPayload.Name,
+  "id": vars.originalPayload.ID,
+  "gender": vars.originalPayload.Gender,
+  "bod": vars.originalPayload.BOD,
+  "mobileNumber": vars.originalPayload.MobileNumber,
+  "addressCity": vars.originalPayload.Address_City,
+  "addressState": vars.originalPayload.Address_State,
+  "addressZipCode": vars.originalPayload.Address_ZipCode,
+  "emailID": vars.originalPayload.EmailID,
+  "occupation": vars.originalPayload.Occupation,
+  "maritalStatus": vars.originalPayload.MaritalStatus,
+  "emergencyContactDetails": vars.originalPayload.EmergencyContactDetails,
+  "status": vars.originalPayload.Status,
+  "medicalHistory": vars.originalPayload.MedicalHistory,
+  "timestamp": now() as String {format: "yyyy-MM-dd HH:mm:ss"}
+
+	
+}]]]></db:input-parameters>
+				</db:insert>
+				
+			</otherwise>
+		</choice>
+		<ee:transform doc:name="Mapping Specialist according to the patient's problem." doc:id="c4324df7-e0cf-4489-9b77-416b64e54a4b" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"SpecialistIN" : if(vars.originalPayload.Reason contains "Ear") "ENT"
+	                 else if(vars.originalPayload.Reason contains "Heart") "Cardiology"
+	                 else "General"
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<db:select doc:name="Retrieving all avaliable doctor's based on Specialty." doc:id="4c799ad6-7307-4a2b-8238-e6bda609e9f0" config-ref="Database_Config">
+					<db:sql ><![CDATA[SELECT * FROM DOCTOR WHERE SpecialistIN =:SpecialistIN;]]></db:sql>
+					<db:input-parameters ><![CDATA[#[{
+	"SpecialistIN" : payload.SpecialistIN
+}]]]></db:input-parameters>
+				</db:select>
+				<ee:transform doc:name="Appointing Single Doctor form a list of doctors." doc:id="10fff4fb-f31a-4f18-aeb3-99ec7a35a003">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload[0]]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<ee:transform doc:name="Merging Patient data , Doctor data and converting accepting cases accordingly as an Array." doc:id="279bc4ce-9833-4c7a-802d-46cecfcef4f8">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/csv
+---
+[{
+	
+	
+  "Name": vars.originalPayload.Name,
+  "Reason" : vars.originalPayload.Reason,
+  "ID": vars.originalPayload.ID,
+  "Gender": vars.originalPayload.Gender,
+  "BOD": vars.originalPayload.BOD,
+  "MobileNumber": vars.originalPayload.MobileNumber,
+  "Address_City": vars.originalPayload.Address_City,
+  "Address_State": vars.originalPayload.Address_State,
+  "Address_ZipCode": vars.originalPayload.Address_ZipCode,
+  "EmailID": vars.originalPayload.EmailID,
+  "Occupation": vars.originalPayload.Occupation,
+  "MaritalStatus": vars.originalPayload.MaritalStatus,
+  "EmergencyContactDetails": vars.originalPayload.EmergencyContactDetails,
+  "Status": vars.originalPayload.Status,
+  "MedicalHistory": vars.originalPayload.MedicalHistory,
+  "Timestamp":  now() as String {format: "yyyy-MM-dd HH:mm:ss"}	
+},
+{
+	
+	"Name" : payload.Name, 
+	"Gender": payload.Gender, 
+	"EmailID" : payload.EmailID, 
+	"SpecialistIN" : payload.SpecialistIN, 
+	"AcceptingCases" : if(payload.AcceptingCases contains "Only Outpatient") "OP-Visit"
+	                    else "Emergency" , 
+	"Surgeon" : payload.Surgeon, 
+	"OfficeHours" : payload.OfficeHours, 
+	"staffID" : payload.staffID,
+	"Timestamp": now() as String {format: "yyyy-MM-dd HH:mm:ss"}
+
+}
+]]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<file:write doc:name="Writing the merged record into a file." doc:id="9514a77d-59fe-4838-aaa7-0c7a6f69d44a" config-ref="File_Config" path="${file.merged}" mode="APPEND"/>
+		<logger level="INFO" doc:name="End Logger" doc:id="5d7a9bd7-ab21-402c-b606-00f2b61db984" message='#["Book Appointment flow ended in system layer impl-flow :: " ++ vars.correlationid]'/>
+	</sub-flow>
+</mule>

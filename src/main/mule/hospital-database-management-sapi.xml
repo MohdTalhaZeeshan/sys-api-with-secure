@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd ">
+    <flow name="hosp-sapi-main">
+        <http:listener path="${http.lispath}" config-ref="hosp-sapi-httpListenerConfig">
+            <http:response statusCode="#[vars.httpStatus default 200]">
+                <http:headers><![CDATA[#[vars.outboundHeaders default {}]]]></http:headers>
+            </http:response>
+            <http:error-response statusCode="#[vars.httpStatus default 500]">
+                <http:body><![CDATA[#[payload]]]></http:body>
+                <http:headers><![CDATA[#[vars.outboundHeaders default {}]]]></http:headers>
+            </http:error-response>
+        </http:listener>
+        <set-variable value='#[correlationId replace&#10;"-"&#10;with&#10;""]' doc:name="TrackingID." doc:id="6526d7a4-696c-4938-a806-516a9d1df19f" variableName="correlationid "/>
+		<apikit:router config-ref="hosp-sapi-config"/>
+		<error-handler ref="Global-Error-Handler" />
+    </flow>
+    <flow name="hosp-sapi-console">
+        <http:listener path="${http.console}" config-ref="hosp-sapi-httpListenerConfig">
+            <http:response statusCode="#[vars.httpStatus default 200]">
+                <http:headers><![CDATA[#[vars.outboundHeaders default {}]]]></http:headers>
+            </http:response>
+            <http:error-response statusCode="#[vars.httpStatus default 500]">
+                <http:body><![CDATA[#[payload]]]></http:body>
+                <http:headers><![CDATA[#[vars.outboundHeaders default {}]]]></http:headers>
+            </http:error-response>
+        </http:listener>
+        <apikit:console config-ref="hosp-sapi-config"/>
+		<error-handler ref="Global-Error-Handler" />
+    </flow>
+    <flow name="post:\bokapp:application\json:hosp-sapi-config">
+    <logger level="INFO" doc:name="Start Logger" doc:id="314ae87c-b08e-4e39-bd56-6a2e9bc19cd0" message='#["Book Appointment flow started in system layer :: " ++ vars.correlationid]'/>
+		<flow-ref doc:name="This Flow is Refering to Book-appointment-spai-flow." doc:id="b62102d7-3a77-4d83-a544-0636b2c1421e" name="Book-appointment-spai-flow"/>
+		<logger level="INFO" doc:name="End Logger" doc:id="077a02bc-a655-4d15-910f-0d658d3f558d" message='#["Book Appointment flow started in system layer :: " ++ vars.correlationid]'/>
+    </flow>
+</mule>
